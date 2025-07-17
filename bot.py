@@ -1,17 +1,22 @@
+from flask import Flask
+import threading
 import time
 import pandas as pd
 import numpy as np
 import requests
 import os
 from dotenv import load_dotenv
+from binance.client import Client
+
 load_dotenv()
+
+app = Flask(__name__)
 
 # Telegram bilgileri
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# Binance verisini çekmek için
-from binance.client import Client
+# Binance API
 api_key = os.getenv("BINANCE_API_KEY")
 api_secret = os.getenv("BINANCE_API_SECRET")
 client = Client(api_key, api_secret)
@@ -26,7 +31,10 @@ coeff = 0.001
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": text}
-    requests.post(url, data=payload)
+    try:
+        requests.post(url, data=payload)
+    except Exception as e:
+        print(f"Telegram gönderim hatası: {e}")
 
 def get_ohlcv(symbol, interval, limit=100):
     klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
@@ -95,19 +103,28 @@ def compute_tott(df):
     df['sell'] = (df['ma'] < df['OTTdn2']) & (df['ma'].shift(1) >= df['OTTdn2'].shift(1))
     return df
 
-def run():
-    df = get_ohlcv(symbol, interval)
-    df = compute_tott(df)
-    if df['buy'].iloc[-1]:
-        print("📈 BUY SIGNAL")
-        send_telegram("📈 BUY SIGNAL (TOTT) — BTC/USDT 5m")
-    elif df['sell'].iloc[-1]:
-        print("📉 SELL SIGNAL")
-        send_telegram("📉 SELL SIGNAL (TOTT) — BTC/USDT 5m")
-    else:
-        print("⏳ No signal")
+def run_bot():
+    print("Bot thread başladı, sinyal bekleniyor...")
+    while True:
+        try:
+            df = get_ohlcv(symbol, interval)
+            df = compute_tott(df)
+            if df['buy'].iloc[-1]:
+                print("📈 BUY SIGNAL")
+                send_telegram("📈 BUY SIGNAL (TOTT) — BTC/USDT 5m")
+            elif df['sell'].iloc[-1]:
+                print("📉 SELL SIGNAL")
+                send_telegram("📉 SELL SIGNAL (TOTT) — BTC/USDT 5m")
+            else:
+                print("⏳ No signal")
+        except Exception as e:
+            print(f"Hata: {e}")
+        time.sleep(60)
 
-# Sürekli çalıştır
-while True:
-    run()
-    time.sleep(60)
+@app.route('/')
+def home():
+    return "Bot çalışıyor!"
+
+if __name__ == "__main__":
+    threading.Thread(target=run_bot, daemon=True).start()
+    app.run(host='0.0.0.0', port=10000)
