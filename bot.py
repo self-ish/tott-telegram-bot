@@ -32,7 +32,8 @@ def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": text}
     try:
-        requests.post(url, data=payload)
+        response = requests.post(url, data=payload)
+        print("Telegram yanıtı:", response.status_code, response.text)
     except Exception as e:
         print(f"Telegram gönderim hatası: {e}")
 
