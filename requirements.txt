@@ -1,4 +1,6 @@
 python-binance
 pandas
+numpy
 requests
+flask
 python-dotenv
