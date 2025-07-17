@@ -105,7 +105,7 @@ def compute_tott(df):
 
 def run_bot():
     print("Bot thread başladı, sinyal bekleniyor...")
-    send_telegram("🚀 Bot başarıyla çalışıyor! (TOTT Telegram Bot)")
+    send_telegram("✅ Test mesajı: Bot Telegram’a erişebiliyor.")
     while True:
         try:
             df = get_ohlcv(symbol, interval)
